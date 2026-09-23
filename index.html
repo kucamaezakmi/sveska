@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Zadaci sa časa programiranja.">
+<title>Sveska</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="page-head">
+    <div>
+      <h1>Sveska</h1>
+      <p class="sub">Zadaci sa časa programiranja.</p>
+    </div>
+    <div class="head-actions">
+      <a class="navlink" href="upload.html">Uredi zadatke</a>
+    </div>
+  </header>
+
+  <div class="toolbar" id="toolbar" hidden>
+    <span class="count" id="count"></span>
+    <input type="search" class="search" id="search" placeholder="Pretraži po naslovu ili predmetu" aria-label="Pretraži zadatke">
+  </div>
+
+  <div id="status" class="empty">Učitavanje.</div>
+  <div id="grid" class="grid" hidden></div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+let allEntries = [];
+
+function cardHtml(e, i) {
+  return '<div class="card" tabindex="0" role="button" data-i="' + i + '" aria-label="Otvori zadatak ' + esc(e.title) + '">' +
+    '<img src="' + esc(e.imagePath) + '" alt="Zadatak: ' + esc(e.title) + '" loading="lazy">' +
+    '<div class="meta">' +
+      '<div class="t">' + esc(e.title) + '</div>' +
+      '<div class="s"><span class="tag">' + esc(e.subject) + '</span>' + fmtDate(e.createdAt) + '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function render(entries) {
+  const grid = document.getElementById("grid");
+  const statusEl = document.getElementById("status");
+  const countEl = document.getElementById("count");
+
+  countEl.textContent = entries.length === 1 ? "1 zadatak" : entries.length + " zadataka";
+
+  if (entries.length === 0) {
+    grid.hidden = true;
+    statusEl.hidden = false;
+    statusEl.textContent = allEntries.length === 0
+      ? "Nema još nijednog zadatka."
+      : "Nijedan zadatak ne odgovara pretrazi.";
+    return;
+  }
+
+  statusEl.hidden = true;
+  grid.hidden = false;
+  grid.innerHTML = entries.map(cardHtml).join("");
+
+  grid.querySelectorAll(".card").forEach(function (el) {
+    const entry = entries[Number(el.dataset.i)];
+    el.addEventListener("click", function () { openModal(entry); });
+    el.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        openModal(entry);
+      }
+    });
+  });
+}
+
+function applyFilter() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  if (!q) return render(allEntries);
+  render(allEntries.filter(function (e) {
+    return (e.title || "").toLowerCase().includes(q) ||
+           (e.subject || "").toLowerCase().includes(q) ||
+           (e.note || "").toLowerCase().includes(q);
+  }));
+}
+
+let lbState = { scale: 1, x: 0, y: 0, natW: 0, natH: 0, baseW: 0, baseH: 0 };
+const MIN_SCALE = 1;
+const MAX_SCALE = 8;
+
+function closeModal() {
+  document.getElementById("modalRoot").innerHTML = "";
+  document.removeEventListener("keydown", onModalKey);
+  window.removeEventListener("resize", fitImage);
+  document.body.style.overflow = "";
+}
+
+function onModalKey(ev) {
+  if (ev.key === "Escape") { closeModal(); return; }
+  if (ev.key === "+" || ev.key === "=") { ev.preventDefault(); zoomBy(1.3); }
+  if (ev.key === "-" || ev.key === "_") { ev.preventDefault(); zoomBy(1 / 1.3); }
+  if (ev.key === "0") { ev.preventDefault(); resetZoom(); }
+}
+
+function applyTransform() {
+  const img = document.getElementById("lbImg");
+  if (!img) return;
+  img.style.transform = "translate(" + lbState.x + "px, " + lbState.y + "px) scale(" + lbState.scale + ")";
+  const out = document.getElementById("lbZoom");
+  if (out) out.textContent = Math.round(lbState.scale * 100) + "%";
+}
+
+function clampPan() {
+  const stage = document.getElementById("lbStage");
+  if (!stage) return;
+  const sw = stage.clientWidth;
+  const sh = stage.clientHeight;
+  const w = lbState.baseW * lbState.scale;
+  const h = lbState.baseH * lbState.scale;
+
+  if (w <= sw) lbState.x = (sw - w) / 2;
+  else lbState.x = Math.min(0, Math.max(sw - w, lbState.x));
+
+  if (h <= sh) lbState.y = (sh - h) / 2;
+  else lbState.y = Math.min(0, Math.max(sh - h, lbState.y));
+}
+
+function zoomAt(factor, cx, cy) {
+  const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, lbState.scale * factor));
+  if (next === lbState.scale) return;
+  const ratio = next / lbState.scale;
+  lbState.x = cx - (cx - lbState.x) * ratio;
+  lbState.y = cy - (cy - lbState.y) * ratio;
+  lbState.scale = next;
+  clampPan();
+  applyTransform();
+}
+
+function zoomBy(factor) {
+  const stage = document.getElementById("lbStage");
+  if (!stage) return;
+  zoomAt(factor, stage.clientWidth / 2, stage.clientHeight / 2);
+}
+
+function resetZoom() {
+  lbState.scale = 1;
+  clampPan();
+  applyTransform();
+}
+
+function fitImage() {
+  const stage = document.getElementById("lbStage");
+  const img = document.getElementById("lbImg");
+  if (!stage || !img) return;
+  const sw = stage.clientWidth;
+  const sh = stage.clientHeight;
+  const ratio = Math.min(sw / lbState.natW, sh / lbState.natH, 1);
+  lbState.baseW = lbState.natW * ratio;
+  lbState.baseH = lbState.natH * ratio;
+  img.style.width = lbState.baseW + "px";
+  img.style.height = lbState.baseH + "px";
+  img.style.maxWidth = "none";
+  img.style.maxHeight = "none";
+  resetZoom();
+}
+
+function openModal(e) {
+  const root = document.getElementById("modalRoot");
+  document.body.style.overflow = "hidden";
+
+  root.innerHTML = '<div class="lightbox" id="lb" role="dialog" aria-modal="true" aria-label="' + esc(e.title) + '">' +
+    '<div class="lb-bar">' +
+      '<div style="min-width:0">' +
+        '<div class="lb-title">' + esc(e.title) + '</div>' +
+        '<div class="lb-meta"><span class="tag">' + esc(e.subject) + '</span>' + fmtDate(e.createdAt) + '</div>' +
+      '</div>' +
+      '<div class="lb-tools">' +
+        '<button class="lb-btn" id="lbOut" aria-label="Umanji">&minus;</button>' +
+        '<span class="lb-zoom" id="lbZoom">100%</span>' +
+        '<button class="lb-btn" id="lbIn" aria-label="Uvećaj">+</button>' +
+        '<button class="lb-btn" id="lbFit">Uklopi</button>' +
+        '<a class="lb-btn" href="' + esc(e.imagePath) + '" target="_blank" rel="noopener">Original</a>' +
+        '<button class="lb-btn" id="lbClose" aria-label="Zatvori">&times;</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="lb-stage" id="lbStage"><img id="lbImg" src="' + esc(e.imagePath) + '" alt="Zadatak: ' + esc(e.title) + '"></div>' +
+    (e.note ? '<div class="lb-note">' + esc(e.note) + '</div>' : '') +
+    '<div class="lb-hint">Točkić miša ili dupli klik za zumiranje, prevlačenje za pomeranje. Tasteri + i - i 0, Escape zatvara.</div>' +
+  '</div>';
+
+  const stage = document.getElementById("lbStage");
+  const img = document.getElementById("lbImg");
+
+  function ready() {
+    lbState.natW = img.naturalWidth || stage.clientWidth;
+    lbState.natH = img.naturalHeight || stage.clientHeight;
+    // Wait one frame so the stage has its final height before measuring.
+    requestAnimationFrame(fitImage);
+  }
+  if (img.complete && img.naturalWidth) ready();
+  else img.addEventListener("load", ready);
+
+  document.getElementById("lbClose").addEventListener("click", closeModal);
+  document.getElementById("lbIn").addEventListener("click", function () { zoomBy(1.35); });
+  document.getElementById("lbOut").addEventListener("click", function () { zoomBy(1 / 1.35); });
+  document.getElementById("lbFit").addEventListener("click", resetZoom);
+
+  stage.addEventListener("wheel", function (ev) {
+    ev.preventDefault();
+    const r = stage.getBoundingClientRect();
+    zoomAt(ev.deltaY < 0 ? 1.18 : 1 / 1.18, ev.clientX - r.left, ev.clientY - r.top);
+  }, { passive: false });
+
+  stage.addEventListener("dblclick", function (ev) {
+    if (moved) return;
+    const r = stage.getBoundingClientRect();
+    if (lbState.scale > 1.05) resetZoom();
+    else zoomAt(2.6, ev.clientX - r.left, ev.clientY - r.top);
+  });
+
+  let dragging = false;
+  let moved = false;
+  let startX = 0;
+  let startY = 0;
+  const pointers = new Map();
+  let pinchDist = 0;
+
+  stage.addEventListener("pointerdown", function (ev) {
+    pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    if (pointers.size === 2) {
+      const p = Array.from(pointers.values());
+      pinchDist = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+      dragging = false;
+      return;
+    }
+    dragging = true;
+    moved = false;
+    startX = ev.clientX - lbState.x;
+    startY = ev.clientY - lbState.y;
+    stage.classList.add("dragging");
+    stage.setPointerCapture(ev.pointerId);
+  });
+
+  stage.addEventListener("pointermove", function (ev) {
+    if (pointers.has(ev.pointerId)) pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+
+    if (pointers.size === 2) {
+      const p = Array.from(pointers.values());
+      const dist = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+      if (pinchDist > 0) {
+        const r = stage.getBoundingClientRect();
+        zoomAt(dist / pinchDist, (p[0].x + p[1].x) / 2 - r.left, (p[0].y + p[1].y) / 2 - r.top);
+      }
+      pinchDist = dist;
+      return;
+    }
+
+    if (!dragging) return;
+    moved = true;
+    lbState.x = ev.clientX - startX;
+    lbState.y = ev.clientY - startY;
+    clampPan();
+    applyTransform();
+  });
+
+  function endPointer(ev) {
+    pointers.delete(ev.pointerId);
+    if (pointers.size < 2) pinchDist = 0;
+    if (pointers.size === 0) {
+      dragging = false;
+      stage.classList.remove("dragging");
+    }
+  }
+  stage.addEventListener("pointerup", endPointer);
+  stage.addEventListener("pointercancel", endPointer);
+
+  window.addEventListener("resize", fitImage);
+  document.getElementById("lbClose").focus();
+  document.addEventListener("keydown", onModalKey);
+}
+
+async function load() {
+  const statusEl = document.getElementById("status");
+  try {
+    const res = await fetch("entries.json?t=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error("neispravan format");
+
+    allEntries = data
+      .filter(function (e) { return e && e.imagePath && e.title; })
+      .sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+
+    document.getElementById("toolbar").hidden = allEntries.length === 0;
+    document.getElementById("search").addEventListener("input", applyFilter);
+    render(allEntries);
+  } catch (err) {
+    statusEl.hidden = false;
+    statusEl.textContent = "Ne mogu da učitam svesku. Osveži stranicu za koji trenutak.";
+  }
+}
+
+mountGithubLink();
+load();
+</script>
+</body>
+</html>
