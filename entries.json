@@ -118,5 +118,13 @@
     "note": "Napraviti metodu Podeli koja deli 2 broja i ima 2 vrednosti koje vraca - rezultat deljenja i ostatak pri deljenju. Pozvati metodu iz Main funkcije i ispisati oba rezultata.",
     "imagePath": "images/1791249532022-ojumuy.jpg",
     "createdAt": 1791249534202
+  },
+  {
+    "id": "1791249638277-ehetny",
+    "title": "Zadatak 17",
+    "subject": "Opšte",
+    "note": "Napraviti metodu Saberi koja sabira 2 broja i daje rezultat tipa int. Pozvati metodu iz Main funkcije i ispisati rezultat.",
+    "imagePath": "images/1791249638277-ehetny.jpg",
+    "createdAt": 1791249640510
   }
 ]
