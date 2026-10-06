@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "1791247095312-zotvey",
+    "title": "Zadatak 1",
+    "subject": "Opšte",
+    "note": "U metodi MAIN ispisati na ekran recenicu: ,,Zdravo, ovo je moj prvi C# program!\".",
+    "imagePath": "images/1791247095312-zotvey.jpg",
+    "createdAt": 1791247097826
+  }
+]
