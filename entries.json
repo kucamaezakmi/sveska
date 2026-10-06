@@ -86,5 +86,13 @@
     "note": "Formirati niz koji sadrzi 10 random tacaka. Ispisati sve clanove niza.",
     "imagePath": "images/1791249011129-vcywub.jpg",
     "createdAt": 1791249013368
+  },
+  {
+    "id": "1791249085360-c9m9n5",
+    "title": "Zadatak 13",
+    "subject": "Opšte",
+    "note": "Odrediti najblizu tacku nuli koordinatnog sistema",
+    "imagePath": "images/1791249085360-c9m9n5.jpg",
+    "createdAt": 1791249087410
   }
 ]
