@@ -174,5 +174,13 @@
     "note": "Dodamo broj i on ga stavi u fajl",
     "imagePath": "images/1791252378206-flk0un.jpg",
     "createdAt": 1791252381244
+  },
+  {
+    "id": "1791252466636-jufd7v",
+    "title": "Zadatak 24",
+    "subject": "Opšte",
+    "note": "Napraviti niz sa imenima pet ucenika. Upisati svako ime u posebnom redu tekstualne datoteke ucenici.txt , koriscenjem foreach petlje.",
+    "imagePath": "images/1791252466636-jufd7v.jpg",
+    "createdAt": 1791252469332
   }
 ]
