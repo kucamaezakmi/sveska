@@ -22,5 +22,13 @@
     "note": "Uneti dva cela broja sa tastature. Napraviti bool promenljivu koja pokazuje da li je prvi broj veci od drugog i drugu bool promenljivu koja pokazuje da li su brojevi jednaki. Ispisati sve vrednosti na ekranu.",
     "imagePath": "images/1791247519903-wexonw.jpg",
     "createdAt": 1791247522415
+  },
+  {
+    "id": "1791247563028-vzp8ef",
+    "title": "Zadatak 4",
+    "subject": "Opšte",
+    "note": "Napisati program koji unutar if bloka deklarise promenljivu i koristi je samo unutar tog bloka. Nakon tog bloka pokusati ispisati istu promenljivu i komentarom objasniti zasto to izaziva gresku pri prevodjenju.",
+    "imagePath": "images/1791247563028-vzp8ef.jpg",
+    "createdAt": 1791247566206
   }
 ]
