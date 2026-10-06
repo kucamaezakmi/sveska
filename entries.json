@@ -94,5 +94,13 @@
     "note": "Odrediti najblizu tacku nuli koordinatnog sistema",
     "imagePath": "images/1791249085360-c9m9n5.jpg",
     "createdAt": 1791249087410
+  },
+  {
+    "id": "1791249148129-fr1ky1",
+    "title": "Zadatak 14",
+    "subject": "Opšte",
+    "note": "Napraviti metodu (funkciju) Duplirajbroj koja duplira vrednost parametra a ispisuje unutar metode. Pozvati metodu iz Main funkcije sa promeljivom, a zatim ispisati vrednosti te promenljive posle poziva metode i uociti da se ona nije promenila!",
+    "imagePath": "images/1791249148129-fr1ky1.jpg",
+    "createdAt": 1791249150296
   }
 ]
