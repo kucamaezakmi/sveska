@@ -6,5 +6,13 @@
     "note": "U metodi MAIN ispisati na ekran recenicu: ,,Zdravo, ovo je moj prvi C# program!\".",
     "imagePath": "images/1791247345436-otinpc.jpg",
     "createdAt": 1791247347895
+  },
+  {
+    "id": "1791247441269-il2g98",
+    "title": "Zadatak 2",
+    "subject": "Opšte",
+    "note": "Deklarisati promenljive: celobrojnu(godine), decimalnu(visina), znakovnu(pol) i tekstualnu(ime). Dobiti im proizvoljne vrednosti i ispisati podatke na ekranu u jednoj recenici.",
+    "imagePath": "images/1791247441269-il2g98.jpg",
+    "createdAt": 1791247444270
   }
 ]
