@@ -62,5 +62,13 @@
     "note": "Formirati niz 5x5 celih brojeva i ispisati ga kao tabelu.",
     "imagePath": "images/1791248541707-t7gio7.jpg",
     "createdAt": 1791248543891
+  },
+  {
+    "id": "1791248769737-mxl2px",
+    "title": "Zadatak 10",
+    "subject": "Opšte",
+    "note": "Formirati niz celih brojeva - random 10. Nakon formiranja sa komandom foreach ispisati sve brojeve na ekranu.",
+    "imagePath": "images/1791248769737-mxl2px.jpg",
+    "createdAt": 1791248771854
   }
 ]
