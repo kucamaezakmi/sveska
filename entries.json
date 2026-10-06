@@ -70,5 +70,13 @@
     "note": "Formirati niz celih brojeva - random 10. Nakon formiranja sa komandom foreach ispisati sve brojeve na ekranu.",
     "imagePath": "images/1791248769737-mxl2px.jpg",
     "createdAt": 1791248771854
+  },
+  {
+    "id": "1791248936929-p5igha",
+    "title": "Zadatak 11",
+    "subject": "Opšte",
+    "note": "Formirati strukturu tacka koja sadrzi 2 cela broja. Dodeliti joj koordinate i ispisati na ekranu.",
+    "imagePath": "images/1791248936929-p5igha.jpg",
+    "createdAt": 1791248939289
   }
 ]
