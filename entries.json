@@ -30,5 +30,13 @@
     "note": "Napisati program koji unutar if bloka deklarise promenljivu i koristi je samo unutar tog bloka. Nakon tog bloka pokusati ispisati istu promenljivu i komentarom objasniti zasto to izaziva gresku pri prevodjenju.",
     "imagePath": "images/1791247563028-vzp8ef.jpg",
     "createdAt": 1791247566206
+  },
+  {
+    "id": "1791247603564-ce5pfm",
+    "title": "Zadatak 5",
+    "subject": "Opšte",
+    "note": "Napraviti staticko celobrojno polje brojac unutar klase Program. Napraviti staticku metodu Pozovi0 koja pri svakom pozivu uveca brojac za 1 i ispise njegovu vrednost. Pozvati metodu tri puta iz Main metode.",
+    "imagePath": "images/1791247603564-ce5pfm.jpg",
+    "createdAt": 1791247606723
   }
 ]
