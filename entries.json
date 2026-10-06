@@ -46,5 +46,13 @@
     "note": "Napraviti niz od 5 celih brojeva sa unapred zadatim vrednostima. Ispisati sve elemente niza pomocu for petlje, uz naznaku rednog broja svakog elementa.",
     "imagePath": "images/1791248400413-e2092g.jpg",
     "createdAt": 1791248403026
+  },
+  {
+    "id": "1791248475176-fez0ox",
+    "title": "Zadatak 7/8",
+    "subject": "Opšte",
+    "note": "Odredi zbir svih clanova niza; Odredi maksimalnu vrednost",
+    "imagePath": "images/1791248475176-fez0ox.jpg",
+    "createdAt": 1791248477376
   }
 ]
