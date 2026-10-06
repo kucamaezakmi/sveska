@@ -142,5 +142,13 @@
     "note": "Napisati program koji upisuje tri recenice i tekstualnu datoteku poruka.txt, svaku u posebnom redu. Nakon upisa, ispisati poruku da je upis uspesno izvrsen.",
     "imagePath": "images/1791249772729-nly24c.jpg",
     "createdAt": 1791249774976
+  },
+  {
+    "id": "1791250013312-5t4vvw",
+    "title": "Zadatak 20",
+    "subject": "Opšte",
+    "note": "Koristeci datoteku poruka.txt napravljenu u prethodnom zadatku, napisati program koji cita sve redove iz nje i ispisuje ih na ekranu, sve dok se ne dostigne kraj datoteke.",
+    "imagePath": "images/1791250013312-5t4vvw.jpg",
+    "createdAt": 1791250015720
   }
 ]
