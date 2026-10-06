@@ -78,5 +78,13 @@
     "note": "Formirati strukturu tacka koja sadrzi 2 cela broja. Dodeliti joj koordinate i ispisati na ekranu.",
     "imagePath": "images/1791248936929-p5igha.jpg",
     "createdAt": 1791248939289
+  },
+  {
+    "id": "1791249011129-vcywub",
+    "title": "Zadatak 12",
+    "subject": "Opšte",
+    "note": "Formirati niz koji sadrzi 10 random tacaka. Ispisati sve clanove niza.",
+    "imagePath": "images/1791249011129-vcywub.jpg",
+    "createdAt": 1791249013368
   }
 ]
