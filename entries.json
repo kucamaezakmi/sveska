@@ -110,5 +110,13 @@
     "note": "Uraditi isti zadatak kao 14., ali povezivanje broja metode uraditi preko reference.",
     "imagePath": "images/1791249455482-is2qsg.jpg",
     "createdAt": 1791249457859
+  },
+  {
+    "id": "1791249532022-ojumuy",
+    "title": "Zadatak 16",
+    "subject": "Opšte",
+    "note": "Napraviti metodu Podeli koja deli 2 broja i ima 2 vrednosti koje vraca - rezultat deljenja i ostatak pri deljenju. Pozvati metodu iz Main funkcije i ispisati oba rezultata.",
+    "imagePath": "images/1791249532022-ojumuy.jpg",
+    "createdAt": 1791249534202
   }
 ]
