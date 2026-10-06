@@ -14,5 +14,13 @@
     "note": "Deklarisati promenljive: celobrojnu(godine), decimalnu(visina), znakovnu(pol) i tekstualnu(ime). Dobiti im proizvoljne vrednosti i ispisati podatke na ekranu u jednoj recenici.",
     "imagePath": "images/1791247441269-il2g98.jpg",
     "createdAt": 1791247444270
+  },
+  {
+    "id": "1791247519903-wexonw",
+    "title": "Zadatak 3",
+    "subject": "Opšte",
+    "note": "Uneti dva cela broja sa tastature. Napraviti bool promenljivu koja pokazuje da li je prvi broj veci od drugog i drugu bool promenljivu koja pokazuje da li su brojevi jednaki. Ispisati sve vrednosti na ekranu.",
+    "imagePath": "images/1791247519903-wexonw.jpg",
+    "createdAt": 1791247522415
   }
 ]
