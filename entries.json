@@ -134,5 +134,13 @@
     "note": "Napraviti 2 metode, jedna mnozi 2 broja, a druga odredjuje da li je broj paran. Korisnik u programu unese 2 cela broja, pozove prvu metodu koja ih pomnozi i onda pozove drugu koja odredi da li je rezultat paran!",
     "imagePath": "images/1791249703502-fr47me.jpg",
     "createdAt": 1791249706035
+  },
+  {
+    "id": "1791249772729-nly24c",
+    "title": "Zadatak 19",
+    "subject": "Opšte",
+    "note": "Napisati program koji upisuje tri recenice i tekstualnu datoteku poruka.txt, svaku u posebnom redu. Nakon upisa, ispisati poruku da je upis uspesno izvrsen.",
+    "imagePath": "images/1791249772729-nly24c.jpg",
+    "createdAt": 1791249774976
   }
 ]
