@@ -166,5 +166,13 @@
     "note": "Odrediti koji je najveci broj u formiranom fajlu",
     "imagePath": "images/1791252199623-2ly94b.jpg",
     "createdAt": 1791252202305
+  },
+  {
+    "id": "1791252378206-flk0un",
+    "title": "Zadatak 23",
+    "subject": "Opšte",
+    "note": "Dodamo broj i on ga stavi u fajl",
+    "imagePath": "images/1791252378206-flk0un.jpg",
+    "createdAt": 1791252381244
   }
 ]
