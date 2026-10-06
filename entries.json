@@ -54,5 +54,13 @@
     "note": "Odredi zbir svih clanova niza; Odredi maksimalnu vrednost",
     "imagePath": "images/1791248475176-fez0ox.jpg",
     "createdAt": 1791248477376
+  },
+  {
+    "id": "1791248541707-t7gio7",
+    "title": "Zadatak 9",
+    "subject": "Opšte",
+    "note": "Formirati niz 5x5 celih brojeva i ispisati ga kao tabelu.",
+    "imagePath": "images/1791248541707-t7gio7.jpg",
+    "createdAt": 1791248543891
   }
 ]
