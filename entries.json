@@ -126,5 +126,13 @@
     "note": "Napraviti metodu Saberi koja sabira 2 broja i daje rezultat tipa int. Pozvati metodu iz Main funkcije i ispisati rezultat.",
     "imagePath": "images/1791249638277-ehetny.jpg",
     "createdAt": 1791249640510
+  },
+  {
+    "id": "1791249703502-fr47me",
+    "title": "Zadatak 18",
+    "subject": "Opšte",
+    "note": "Napraviti 2 metode, jedna mnozi 2 broja, a druga odredjuje da li je broj paran. Korisnik u programu unese 2 cela broja, pozove prvu metodu koja ih pomnozi i onda pozove drugu koja odredi da li je rezultat paran!",
+    "imagePath": "images/1791249703502-fr47me.jpg",
+    "createdAt": 1791249706035
   }
 ]
