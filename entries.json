@@ -102,5 +102,13 @@
     "note": "Napraviti metodu (funkciju) Duplirajbroj koja duplira vrednost parametra a ispisuje unutar metode. Pozvati metodu iz Main funkcije sa promeljivom, a zatim ispisati vrednosti te promenljive posle poziva metode i uociti da se ona nije promenila!",
     "imagePath": "images/1791249148129-fr1ky1.jpg",
     "createdAt": 1791249150296
+  },
+  {
+    "id": "1791249455482-is2qsg",
+    "title": "Zadatak 15",
+    "subject": "Opšte",
+    "note": "Uraditi isti zadatak kao 14., ali povezivanje broja metode uraditi preko reference.",
+    "imagePath": "images/1791249455482-is2qsg.jpg",
+    "createdAt": 1791249457859
   }
 ]
