@@ -158,5 +158,13 @@
     "note": "Upisati u fajl 15 slucajnih brojeva",
     "imagePath": "images/1791250090277-srh7u2.jpg",
     "createdAt": 1791250092579
+  },
+  {
+    "id": "1791252199623-2ly94b",
+    "title": "Zadatak 22",
+    "subject": "Opšte",
+    "note": "Odrediti koji je najveci broj u formiranom fajlu",
+    "imagePath": "images/1791252199623-2ly94b.jpg",
+    "createdAt": 1791252202305
   }
 ]
