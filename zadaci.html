@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Svi zadaci sa časa, spremni za kopiranje i preuzimanje.">
+<title>Sveska: svi zadaci</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="page-head">
+    <div>
+      <h1>Svi zadaci</h1>
+      <p class="sub">Kopiraj tekst ili sliku zadatka, ili ga preuzmi.</p>
+    </div>
+    <div class="head-actions">
+      <a class="navlink" href="index.html">Nazad na svesku</a>
+    </div>
+  </header>
+
+  <div class="toolbar" id="toolbar" hidden>
+    <span class="count" id="count"></span>
+    <input type="search" class="search" id="search" placeholder="Pretraži po naslovu ili predmetu" aria-label="Pretraži zadatke">
+    <button class="ghost" id="downloadAllBtn" type="button">Preuzmi sve (.txt)</button>
+  </div>
+
+  <div id="status" class="empty">Učitavanje.</div>
+  <div id="list" class="task-list" hidden></div>
+</div>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+let allEntries = [];
+
+function entryText(e) {
+  return e.title + (e.note ? "\n\n" + e.note : "");
+}
+
+// Turns a title into a safe file name, e.g. "Zadatak 3, nizovi" -> "Zadatak-3-nizovi".
+function fileName(e, ext) {
+  const base = String(e.title).normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return (base || "zadatak") + "." + ext;
+}
+
+function saveBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
+// Clipboard only accepts PNG images, and the stored images are JPEG, so the
+// image is redrawn onto a canvas and exported as PNG.
+async function imageAsPng(src) {
+  const res = await fetch(src);
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const bitmap = await createImageBitmap(await res.blob());
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext("2d").drawImage(bitmap, 0, 0);
+  return new Promise(function (resolve, reject) {
+    canvas.toBlob(function (b) { b ? resolve(b) : reject(new Error("PNG konverzija nije uspela")); }, "image/png");
+  });
+}
+
+async function copyImage(e) {
+  if (!navigator.clipboard || typeof ClipboardItem === "undefined") {
+    throw new Error("Ovaj browser ne podržava kopiranje slika.");
+  }
+  // Safari requires the ClipboardItem to be created synchronously inside the
+  // click, so the PNG is passed as a promise instead of awaited first.
+  await navigator.clipboard.write([new ClipboardItem({ "image/png": imageAsPng(e.imagePath) })]);
+}
+
+async function copyText(e) {
+  if (!navigator.clipboard) throw new Error("Ovaj browser ne podržava kopiranje.");
+  await navigator.clipboard.writeText(entryText(e));
+}
+
+// Shows the outcome on the button itself, then restores its label.
+async function runAction(btn, action) {
+  const label = btn.textContent;
+  btn.disabled = true;
+  try {
+    await action();
+    btn.textContent = "Kopirano";
+    btn.classList.add("done");
+  } catch (err) {
+    btn.textContent = "Nije uspelo";
+    btn.title = err.message;
+  }
+  setTimeout(function () {
+    btn.textContent = label;
+    btn.classList.remove("done");
+    btn.removeAttribute("title");
+    btn.disabled = false;
+  }, 1600);
+}
+
+function itemHtml(e, i) {
+  return '<article class="task" data-i="' + i + '">' +
+    '<a class="task-img" href="' + esc(e.imagePath) + '" target="_blank" rel="noopener" title="Otvori sliku u punoj veličini">' +
+      '<img src="' + esc(e.imagePath) + '" alt="Zadatak: ' + esc(e.title) + '" loading="lazy">' +
+    '</a>' +
+    '<div class="task-body">' +
+      '<div class="task-title">' + esc(e.title) + '</div>' +
+      '<div class="task-meta"><span class="tag">' + esc(e.subject) + '</span>' + fmtDate(e.createdAt) + '</div>' +
+      (e.note ? '<p class="task-note">' + esc(e.note) + '</p>' : '') +
+      '<div class="task-actions">' +
+        '<button class="ghost" type="button" data-act="text">Kopiraj tekst</button>' +
+        '<button class="ghost" type="button" data-act="image">Kopiraj sliku</button>' +
+        '<a class="navlink" href="' + esc(e.imagePath) + '" download="' + esc(fileName(e, "jpg")) + '">Preuzmi sliku</a>' +
+      '</div>' +
+    '</div>' +
+  '</article>';
+}
+
+function render(entries) {
+  const list = document.getElementById("list");
+  const statusEl = document.getElementById("status");
+
+  document.getElementById("count").textContent =
+    entries.length === 1 ? "1 zadatak" : entries.length + " zadataka";
+
+  if (entries.length === 0) {
+    list.hidden = true;
+    statusEl.hidden = false;
+    statusEl.textContent = allEntries.length === 0
+      ? "Nema još nijednog zadatka."
+      : "Nijedan zadatak ne odgovara pretrazi.";
+    return;
+  }
+
+  statusEl.hidden = true;
+  list.hidden = false;
+  list.innerHTML = entries.map(itemHtml).join("");
+
+  list.querySelectorAll("button[data-act]").forEach(function (btn) {
+    const entry = entries[Number(btn.closest(".task").dataset.i)];
+    const action = btn.dataset.act === "image" ? copyImage : copyText;
+    btn.addEventListener("click", function () {
+      runAction(btn, function () { return action(entry); });
+    });
+  });
+}
+
+function filtered() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  if (!q) return allEntries;
+  return allEntries.filter(function (e) {
+    return (e.title || "").toLowerCase().includes(q) ||
+           (e.subject || "").toLowerCase().includes(q) ||
+           (e.note || "").toLowerCase().includes(q);
+  });
+}
+
+// Downloads whatever the search currently shows, oldest first, so the file
+// reads in the order the tasks were given in class.
+function downloadAll() {
+  const text = filtered().slice().reverse().map(function (e) {
+    return entryText(e) + "\n\n(" + e.subject + ", " + fmtDate(e.createdAt) + ")";
+  }).join("\n\n----------------------------------------\n\n");
+  saveBlob(new Blob([text + "\n"], { type: "text/plain;charset=utf-8" }), "zadaci.txt");
+}
+
+async function load() {
+  const statusEl = document.getElementById("status");
+  try {
+    allEntries = await loadEntries();
+    document.getElementById("toolbar").hidden = allEntries.length === 0;
+    document.getElementById("search").addEventListener("input", function () { render(filtered()); });
+    document.getElementById("downloadAllBtn").addEventListener("click", downloadAll);
+    render(allEntries);
+  } catch (err) {
+    statusEl.hidden = false;
+    statusEl.textContent = "Ne mogu da učitam zadatke. Osveži stranicu za koji trenutak.";
+  }
+}
+
+mountGithubLink();
+load();
+</script>
+</body>
+</html>

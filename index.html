@@ -15,6 +15,7 @@
       <p class="sub">Zadaci sa časa programiranja.</p>
     </div>
     <div class="head-actions">
+      <a class="navlink" href="zadaci.html">Prikaži zadatke</a>
       <a class="navlink" href="upload.html">Uredi zadatke</a>
     </div>
   </header>
@@ -285,15 +286,7 @@ function openModal(e) {
 async function load() {
   const statusEl = document.getElementById("status");
   try {
-    const res = await fetch("entries.json?t=" + Date.now(), { cache: "no-store" });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-
-    const data = await res.json();
-    if (!Array.isArray(data)) throw new Error("neispravan format");
-
-    allEntries = data
-      .filter(function (e) { return e && e.imagePath && e.title; })
-      .sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+    allEntries = await loadEntries();
 
     document.getElementById("toolbar").hidden = allEntries.length === 0;
     document.getElementById("search").addEventListener("input", applyFilter);
