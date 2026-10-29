@@ -1,4 +1,4 @@
-// Helpers shared by index.html and upload.html. Depends on config.js.
+// Helpers shared by index.html, zadaci.html and upload.html. Depends on config.js.
 
 // Escapes text before it goes into an HTML string. Both pages build markup by
 // concatenation, so every untrusted value has to pass through here.
@@ -27,4 +27,18 @@ function mountGithubLink() {
   host.insertAdjacentHTML("afterbegin",
     '<a class="icon-link" href="' + SITE.profileUrl + '" target="_blank" rel="noopener"' +
     ' title="Moj GitHub profil" aria-label="Otvori moj GitHub profil">' + GITHUB_ICON_SVG + '</a>');
+}
+
+// Fetches the public entries.json and returns the valid entries, newest first.
+// index.html and zadaci.html both use it, so they agree on what counts as an entry.
+async function loadEntries() {
+  const res = await fetch("entries.json?t=" + Date.now(), { cache: "no-store" });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+
+  const data = await res.json();
+  if (!Array.isArray(data)) throw new Error("neispravan format");
+
+  return data
+    .filter(function (e) { return e && e.imagePath && e.title; })
+    .sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
 }
