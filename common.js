@@ -48,6 +48,21 @@ function loadEntries() {
   return loadIndex("entries.json", function (e) { return e.imagePath && e.title; });
 }
 
+// Code entries list their files in `files`. The first version of the upload
+// stored one file in fileName/filePath, and entries in that shape still exist.
+function codeFiles(e) {
+  if (Array.isArray(e.files)) return e.files;
+  return e.filePath ? [{ name: e.fileName, path: e.filePath }] : [];
+}
+
 function loadCode() {
-  return loadIndex("kod.json", function (e) { return e.filePath && e.title; });
+  return loadIndex("kod.json", function (e) { return e.title && codeFiles(e).length > 0; });
+}
+
+// Serbian plural: plural(1, "fajl", "fajla", "fajlova") -> "1 fajl", 3 -> "3 fajla", 5 -> "5 fajlova".
+function plural(n, one, few, many) {
+  const d = n % 10;
+  const dd = n % 100;
+  const word = d === 1 && dd !== 11 ? one : d >= 2 && d <= 4 && (dd < 12 || dd > 14) ? few : many;
+  return n + " " + word;
 }

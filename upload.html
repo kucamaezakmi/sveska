@@ -35,7 +35,7 @@
 
       <div class="field">
         <label class="lbl" for="kodNaslov">Naslov</label>
-        <input type="text" id="kodNaslov" placeholder="Opciono, inače ime fajla">
+        <input type="text" id="kodNaslov" placeholder="Opciono, inače ime foldera">
       </div>
 
       <div class="field">
@@ -44,12 +44,15 @@
       </div>
 
       <div class="field">
-        <span class="lbl">Fajl sa kodom</span>
+        <span class="lbl">Kod</span>
         <div class="dropzone">
-          <label class="file-label" for="codeFileInput">Izaberi fajl</label>
-          <input type="file" id="codeFileInput" hidden>
-          <span class="dz-hint" id="codeHint">.cs, .py, .c, .cpp, .java, .js ili bilo koji tekstualni fajl.</span>
+          <label class="file-label" for="codeDirInput">Izaberi folder</label>
+          <input type="file" id="codeDirInput" webkitdirectory multiple hidden>
+          <label class="file-label" for="codeFileInput">Izaberi fajlove</label>
+          <input type="file" id="codeFileInput" multiple hidden>
+          <span class="dz-hint" id="codeHint"></span>
         </div>
+        <ul class="picked-files" id="codePicked" hidden></ul>
       </div>
 
       <div id="codeErr" class="err" hidden></div>
@@ -179,9 +182,10 @@ async function verifyToken() {
   return true;
 }
 
-// Reads a JSON index file (entries.json or kod.json) together with its sha.
-async function getJsonFile(path) {
-  const res = await gh(SITE.apiBase + "/contents/" + path + "?ref=" + SITE.branch + "&t=" + Date.now());
+// Reads a JSON index file (entries.json or kod.json) together with its sha,
+// from the branch head or from a given commit.
+async function getJsonFile(path, ref) {
+  const res = await gh(SITE.apiBase + "/contents/" + path + "?ref=" + (ref || SITE.branch) + "&t=" + Date.now());
   if (res.status === 404) return { entries: [], sha: null };
   if (!res.ok) {
     const err = new Error(ghError(res.status, await res.text()));
@@ -261,34 +265,160 @@ async function updateJsonFile(path, mutate, message) {
   throw lastErr;
 }
 
-// The site shows code as text, so binary files are rejected up front instead of
-// ending up as garbage on zadaci.html.
-const MAX_CODE_BYTES = 200 * 1024;
-const CODE_HINT = ".cs, .py, .c, .cpp, .java, .js ili bilo koji tekstualni fajl.";
-let codeFile = null;
+async function ghJson(url, method, body) {
+  const res = await gh(url, method ? {
+    method: method,
+    headers: Object.assign(ghHeaders(), { "Content-Type": "application/json" }),
+    body: JSON.stringify(body)
+  } : undefined);
+  if (!res.ok) {
+    const err = new Error(ghError(res.status, await res.text()));
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
 
-async function readCodeFile(file) {
-  if (file.size > MAX_CODE_BYTES) throw new Error("Fajl je veći od 200 KB.");
-  const text = await file.text();
-  if (text.includes("\u0000")) throw new Error("Fajl nije tekstualni. Izaberi fajl sa izvornim kodom.");
-  if (!text.trim()) throw new Error("Fajl je prazan.");
-  return text;
+// Writes every change of a code task in one commit through the Git Data API,
+// so a multi-file task is saved or removed as a whole. The contents API needs
+// one commit per file and leaves half a task behind when a later call fails.
+// build(entries) gets the kod.json entries at the current head and returns
+// { entries, files: [{ path, content }] }; content null deletes the file.
+async function commitCodeChanges(build, message) {
+  let lastErr;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const ref = await ghJson(SITE.apiBase + "/git/ref/heads/" + SITE.branch);
+    const headSha = ref.object.sha;
+    const head = await ghJson(SITE.apiBase + "/git/commits/" + headSha);
+    const current = await getJsonFile(CODE_PATH, headSha);
+    const change = build(current.entries.slice());
+
+    const tree = change.files.map(function (f) {
+      return f.content === null
+        ? { path: f.path, mode: "100644", type: "blob", sha: null }
+        : { path: f.path, mode: "100644", type: "blob", content: f.content };
+    });
+    tree.push({ path: CODE_PATH, mode: "100644", type: "blob", content: JSON.stringify(change.entries, null, 2) });
+
+    const newTree = await ghJson(SITE.apiBase + "/git/trees", "POST", { base_tree: head.tree.sha, tree: tree });
+    const commit = await ghJson(SITE.apiBase + "/git/commits", "POST", {
+      message: message, tree: newTree.sha, parents: [headSha]
+    });
+    try {
+      // Not forced: if another commit landed since we read the head, GitHub
+      // rejects this as a non-fast-forward and we rebuild on the new head.
+      await ghJson(SITE.apiBase + "/git/refs/heads/" + SITE.branch, "PATCH", { sha: commit.sha });
+      return change.entries;
+    } catch (err) {
+      lastErr = err;
+      if (err.status === 409 || err.status === 422) {
+        await new Promise(function (r) { setTimeout(r, 250 * (attempt + 1)); });
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
+// What gets uploaded from a picked folder: source files only. Build output, IDE
+// settings and project files (.sln, .csproj) are not code the student wrote.
+const SKIP_DIRS = ["bin", "obj", "Debug", "Release", "x64", "packages", "Properties",
+  ".vs", ".vscode", ".idea", ".git", "node_modules", "__pycache__", "venv", ".venv"];
+const CODE_EXTS = ["cs", "vb", "fs", "c", "h", "cpp", "hpp", "cc", "java", "kt", "py",
+  "js", "ts", "jsx", "tsx", "html", "css", "sql", "php", "go", "rs", "rb", "swift", "sh", "ps1"];
+const MAX_CODE_FILES = 30;
+const MAX_CODE_BYTES = 500 * 1024;
+const CODE_HINT = "Ceo folder projekta: sajt sam uzima samo fajlove sa kodom (.cs, .py, .cpp...).";
+
+// { title, files: [{ name, text }] } for the picked folder or files, or null.
+let codePick = null;
+
+function isCodeFile(relPath) {
+  const parts = relPath.split("/");
+  const ext = (parts[parts.length - 1].split(".").pop() || "").toLowerCase();
+  return CODE_EXTS.includes(ext) &&
+    !parts.slice(0, -1).some(function (dir) { return SKIP_DIRS.includes(dir); });
+}
+
+// A Visual Studio project sits one or two folders deep
+// (zadatak1/zadatak1/Program.cs). Dropping the folders every file shares keeps
+// the names short: Program.cs, Models/Student.cs.
+function stripCommonDirs(paths) {
+  const split = paths.map(function (p) { return p.split("/"); });
+  let n = 0;
+  while (split.every(function (s) { return s.length - 1 > n && s[n] === split[0][n]; })) n++;
+  return split.map(function (s) { return s.slice(n).join("/"); });
+}
+
+// Entry point first (Program.cs, main.py...), then alphabetical, so the first
+// tab on zadaci.html is the file a reader expects to start from.
+function byEntryPoint(a, b) {
+  const main = /^(program|main|index|app)\.[a-z]+$/i;
+  const am = main.test(a.name.split("/").pop());
+  const bm = main.test(b.name.split("/").pop());
+  if (am !== bm) return am ? -1 : 1;
+  return a.name.localeCompare(b.name);
+}
+
+async function readCodePick(fileList) {
+  const all = Array.from(fileList);
+  const picked = all.filter(function (f) { return isCodeFile(f.webkitRelativePath || f.name); });
+  if (picked.length === 0) throw new Error("U izboru nema fajlova sa kodom (.cs, .py, .cpp...).");
+  if (picked.length > MAX_CODE_FILES) throw new Error("Previše fajlova sa kodom (" + picked.length + "), najviše " + MAX_CODE_FILES + ".");
+
+  const total = picked.reduce(function (sum, f) { return sum + f.size; }, 0);
+  if (total > MAX_CODE_BYTES) throw new Error("Kod je veći od 500 KB ukupno.");
+
+  const names = stripCommonDirs(picked.map(function (f) { return f.webkitRelativePath || f.name; }));
+  const files = await Promise.all(picked.map(async function (f, i) {
+    const text = await f.text();
+    if (text.includes("\u0000")) throw new Error(f.name + " nije tekstualni fajl.");
+    return { name: names[i], text: text };
+  }));
+
+  const root = (picked[0].webkitRelativePath || "").split("/")[0];
+  return {
+    title: root || (files.length === 1 ? files[0].name : ""),
+    files: files.sort(byEntryPoint),
+    skipped: all.length - picked.length
+  };
 }
 
 // Keeps the extension (zadaci.html picks the language from it) and drops
-// characters that are awkward in a URL path.
-function safeFileName(name) {
-  const clean = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^[-.]+/, "");
-  return clean || "kod.txt";
+// characters that are awkward in a URL path, segment by segment.
+function safePath(name) {
+  return name.split("/").map(function (seg) {
+    const clean = seg.normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^[-.]+/, "");
+    return clean || "fajl";
+  }).join("/");
+}
+
+function showCodePick() {
+  const list = document.getElementById("codePicked");
+  const hint = document.getElementById("codeHint");
+  if (!codePick) {
+    list.hidden = true;
+    list.innerHTML = "";
+    hint.textContent = CODE_HINT;
+    return;
+  }
+  hint.textContent = plural(codePick.files.length, "fajl", "fajla", "fajlova") + " sa kodom" +
+    (codePick.skipped ? ", preskočeno ostalih: " + codePick.skipped + " (bin, obj, .sln, .csproj...)." : ".");
+  list.innerHTML = codePick.files.map(function (f) {
+    return "<li>" + esc(f.name) + "</li>";
+  }).join("");
+  list.hidden = false;
 }
 
 function resetCodeForm() {
-  codeFile = null;
+  codePick = null;
   document.getElementById("kodNaslov").value = "";
   document.getElementById("kodNapomena").value = "";
   document.getElementById("codeFileInput").value = "";
-  document.getElementById("codeHint").textContent = CODE_HINT;
+  document.getElementById("codeDirInput").value = "";
+  showCodePick();
 }
 
 async function refreshCodeList() {
@@ -302,7 +432,7 @@ async function refreshCodeList() {
   try {
     const result = await getJsonFile(CODE_PATH);
     const entries = result.entries
-      .filter(function (e) { return e && e.id && e.filePath; })
+      .filter(function (e) { return e && e.id && codeFiles(e).length > 0; })
       .sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
 
     document.getElementById("codeCount").textContent = "Kod: " + entries.length;
@@ -315,10 +445,13 @@ async function refreshCodeList() {
     listStatus.hidden = true;
     list.hidden = false;
     list.innerHTML = entries.map(function (e) {
+      const files = codeFiles(e);
       return '<div class="code-row">' +
         '<div class="code-row-main">' +
           '<div class="t">' + esc(e.title) + '</div>' +
-          '<div class="s"><span class="tag">' + esc(e.fileName) + '</span>' + fmtDate(e.createdAt) + '</div>' +
+          '<div class="s"><span class="tag">' +
+            esc(files.length === 1 ? files[0].name : plural(files.length, "fajl", "fajla", "fajlova")) +
+          '</span>' + fmtDate(e.createdAt) + '</div>' +
         '</div>' +
         '<button class="ghost danger" type="button" data-id="' + esc(e.id) + '" data-title="' + esc(e.title) + '">Obriši</button>' +
       '</div>';
@@ -327,12 +460,31 @@ async function refreshCodeList() {
     list.querySelectorAll("button[data-id]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         if (!confirm('Obrisati zadatak "' + btn.dataset.title + '"?')) return;
-        removeEntry(CODE_PATH, btn.dataset.id, btn, btn.dataset.title, refreshCodeList);
+        removeCodeEntry(btn.dataset.id, btn, btn.dataset.title);
       });
     });
   } catch (err) {
     listStatus.hidden = false;
     listStatus.textContent = "Ne mogu da učitam listu. " + err.message;
+  }
+}
+
+async function removeCodeEntry(id, btn, title) {
+  btn.disabled = true;
+  btn.textContent = "Brisanje";
+  try {
+    await commitCodeChanges(function (entries) {
+      const target = entries.find(function (e) { return e.id === id; });
+      return {
+        entries: entries.filter(function (e) { return e.id !== id; }),
+        files: target ? codeFiles(target).map(function (f) { return { path: f.path, content: null }; }) : []
+      };
+    }, "Ukloni zadatak sa kodom: " + title);
+    await refreshCodeList();
+  } catch (err) {
+    alert("Brisanje nije uspelo. " + err.message);
+    btn.disabled = false;
+    btn.textContent = "Obriši";
   }
 }
 
@@ -433,8 +585,7 @@ async function refreshList() {
   }
 }
 
-// Removes an entry from an index file, then the file it points to (the image
-// of a picture task, or the source file of a code task).
+// Removes an entry from an index file, then the image it points to.
 async function removeEntry(indexPath, id, btn, title, refresh) {
   if (btn) { btn.disabled = true; btn.textContent = "Brisanje"; }
   try {
@@ -444,10 +595,9 @@ async function removeEntry(indexPath, id, btn, title, refresh) {
       return entries.filter(function (e) { return e.id !== id; });
     }, "Ukloni zadatak: " + (title || id));
 
-    const filePath = target && (target.imagePath || target.filePath);
-    if (filePath) {
+    if (target && target.imagePath) {
       try {
-        await deleteRepoFile(filePath, "Ukloni fajl: " + target.title);
+        await deleteRepoFile(target.imagePath, "Ukloni sliku: " + target.title);
       } catch (e) {
         // Entry is already gone from the list, so a leftover image file is
         // harmless. Not worth failing the delete over.
@@ -553,60 +703,57 @@ document.getElementById("entryForm").addEventListener("submit", async function (
   }
 });
 
-document.getElementById("codeFileInput").addEventListener("change", async function (e) {
-  const file = e.target.files[0];
-  codeFile = null;
-  if (!file) return;
+async function onCodePicked(e) {
   showErr("codeErr", "");
-  const hint = document.getElementById("codeHint");
+  codePick = null;
   try {
-    codeFile = { name: file.name, text: await readCodeFile(file) };
-    const lines = codeFile.text.split("\n").length;
-    const few = lines % 10 >= 2 && lines % 10 <= 4 && (lines % 100 < 12 || lines % 100 > 14);
-    hint.textContent = file.name + ", " + lines + (few ? " linije." : " linija.");
+    if (e.target.files.length) codePick = await readCodePick(e.target.files);
   } catch (err) {
-    e.target.value = "";
-    hint.textContent = CODE_HINT;
     showErr("codeErr", err.message);
   }
-});
+  e.target.value = "";
+  showCodePick();
+}
+
+document.getElementById("codeDirInput").addEventListener("change", onCodePicked);
+document.getElementById("codeFileInput").addEventListener("change", onCodePicked);
 
 document.getElementById("codeForm").addEventListener("submit", async function (e) {
   e.preventDefault();
   showErr("codeErr", "");
 
-  if (!codeFile) {
-    showErr("codeErr", "Izaberi fajl sa kodom.");
+  if (!codePick) {
+    showErr("codeErr", "Izaberi folder ili fajlove sa kodom.");
     return;
   }
 
   const btn = document.getElementById("codeSubmitBtn");
   const statusMsg = document.getElementById("codeStatusMsg");
-  const file = codeFile;
-  const title = document.getElementById("kodNaslov").value.trim() || file.name;
+  const pick = codePick;
+  const title = document.getElementById("kodNaslov").value.trim() || pick.title || "Zadatak";
   const note = document.getElementById("kodNapomena").value.trim();
   const id = String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8);
-  const filePath = "kod/" + id + "-" + safeFileName(file.name);
-  let fileUploaded = false;
+  const files = pick.files.map(function (f) {
+    return { name: f.name, path: "kod/" + id + "/" + safePath(f.name), text: f.text };
+  });
 
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Slanje';
   statusMsg.textContent = "";
 
   try {
-    await putFile(filePath, utf8ToB64(file.text), "Dodaj kod: " + title);
-    fileUploaded = true;
-
-    await updateJsonFile(CODE_PATH, function (entries) {
+    await commitCodeChanges(function (entries) {
       entries.push({
         id: id,
         title: title,
         note: note,
-        fileName: file.name,
-        filePath: filePath,
+        files: files.map(function (f) { return { name: f.name, path: f.path }; }),
         createdAt: Date.now()
       });
-      return entries;
+      return {
+        entries: entries,
+        files: files.map(function (f) { return { path: f.path, content: f.text }; })
+      };
     }, "Dodaj zadatak sa kodom: " + title);
 
     resetCodeForm();
@@ -614,12 +761,6 @@ document.getElementById("codeForm").addEventListener("submit", async function (e
     setTimeout(function () { statusMsg.textContent = ""; }, 4000);
     await refreshCodeList();
   } catch (err) {
-    // Same rollback as the image upload: no source file without an index entry.
-    if (fileUploaded) {
-      try {
-        await deleteRepoFile(filePath, "Poništi nedovršeni upload: " + title);
-      } catch (e2) {}
-    }
     showErr("codeErr", "Snimanje nije uspelo. " + err.message);
   } finally {
     btn.disabled = false;
@@ -673,6 +814,7 @@ function enterApp() {
 }
 
 mountGithubLink();
+showCodePick();
 
 (async function init() {
   if (!token) return;
