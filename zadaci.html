@@ -13,7 +13,7 @@
   <header class="page-head">
     <div>
       <h1>Zadaci</h1>
-      <p class="sub">Kod sa časa. Kopiraj ga ili preuzmi kao fajl.</p>
+      <p class="sub">Kod sa časa. Kopiraj ga ili preuzmi.</p>
     </div>
     <div class="head-actions">
       <a class="navlink" href="index.html">Nazad na svesku</a>
@@ -33,43 +33,54 @@
 <script src="config.js"></script>
 <script src="common.js"></script>
 <script>
-// Each entry gets a `code` field once its source file is fetched; null means
-// the fetch failed and the card shows an error instead of the code.
+const JSZIP_URL = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+
+// Each entry gets `sources`: [{ name, path, code }], where code is null when
+// that file could not be fetched and its tab shows an error instead.
 let allEntries = [];
 
-async function fetchSource(e) {
+async function fetchSource(file, version) {
   try {
-    const res = await fetch(e.filePath + "?t=" + e.createdAt);
+    const res = await fetch(file.path + "?t=" + version);
     if (!res.ok) throw new Error("HTTP " + res.status);
-    e.code = await res.text();
+    return { name: file.name, path: file.path, code: await res.text() };
   } catch (err) {
-    e.code = null;
+    return { name: file.name, path: file.path, code: null };
   }
+}
+
+async function withSources(e) {
+  e.sources = await Promise.all(codeFiles(e).map(function (f) { return fetchSource(f, e.createdAt); }));
   return e;
+}
+
+function baseName(path) {
+  return path.split("/").pop();
 }
 
 // Picks the language from the file extension; highlight.js knows the common
 // ones (cs, py, c, cpp, java, js...). Anything else is auto-detected.
 // highlight.js escapes its input, so its HTML output is safe to insert.
-function highlight(codeEl, e) {
+function highlight(codeEl, src) {
   if (typeof hljs === "undefined") {
-    codeEl.textContent = e.code;
+    codeEl.textContent = src.code;
     return;
   }
-  const ext = (e.fileName.split(".").pop() || "").toLowerCase();
+  const ext = (baseName(src.name).split(".").pop() || "").toLowerCase();
   const result = hljs.getLanguage(ext)
-    ? hljs.highlight(e.code, { language: ext, ignoreIllegals: true })
-    : hljs.highlightAuto(e.code);
+    ? hljs.highlight(src.code, { language: ext, ignoreIllegals: true })
+    : hljs.highlightAuto(src.code);
   codeEl.innerHTML = result.value;
-  codeEl.classList.add("hljs");
+  codeEl.className = "hljs";
 }
 
-async function copyCode(btn, e) {
+// Shows the outcome on the button itself, then restores its label.
+async function runAction(btn, okLabel, action) {
   const label = btn.textContent;
   btn.disabled = true;
   try {
-    await navigator.clipboard.writeText(e.code);
-    btn.textContent = "Kopirano";
+    await action();
+    btn.textContent = okLabel;
     btn.classList.add("done");
   } catch (err) {
     btn.textContent = "Nije uspelo";
@@ -81,34 +92,119 @@ async function copyCode(btn, e) {
   }, 1600);
 }
 
+function saveBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
+// JSZip is only needed when someone downloads a whole task, so it loads on
+// the first click instead of with the page.
+let jszipPromise = null;
+function loadJSZip() {
+  if (!jszipPromise) {
+    jszipPromise = new Promise(function (resolve, reject) {
+      const s = document.createElement("script");
+      s.src = JSZIP_URL;
+      s.onload = function () { resolve(window.JSZip); };
+      s.onerror = function () { jszipPromise = null; reject(new Error("JSZip nije učitan")); };
+      document.head.appendChild(s);
+    });
+  }
+  return jszipPromise;
+}
+
+async function downloadZip(e) {
+  const JSZip = await loadJSZip();
+  const zip = new JSZip();
+  const folder = zip.folder(e.title);
+  e.sources.forEach(function (src) {
+    if (src.code !== null) folder.file(src.name, src.code);
+  });
+  saveBlob(await zip.generateAsync({ type: "blob" }), e.title.replace(/[\\/:*?"<>|]+/g, "-") + ".zip");
+}
+
 function cardHtml(e, i) {
-  const ok = e.code !== null;
+  const many = e.sources.length > 1;
   return '<article class="code-card" data-i="' + i + '">' +
     '<div class="code-head">' +
       '<div>' +
         '<div class="code-title">' + esc(e.title) + '</div>' +
-        '<div class="code-meta"><span class="tag">' + esc(e.fileName) + '</span>' + fmtDate(e.createdAt) + '</div>' +
+        '<div class="code-meta"><span class="tag">' +
+          esc(many ? plural(e.sources.length, "fajl", "fajla", "fajlova") : e.sources[0].name) +
+        '</span>' + fmtDate(e.createdAt) + '</div>' +
       '</div>' +
-      (ok
-        ? '<div class="code-actions">' +
-            '<button class="ghost" type="button" data-act="copy">Kopiraj kod</button>' +
-            '<a class="navlink" href="' + esc(e.filePath) + '" download="' + esc(e.fileName) + '">Preuzmi fajl</a>' +
-          '</div>'
-        : '') +
+      '<div class="code-actions">' +
+        '<button class="ghost" type="button" data-act="copy">Kopiraj kod</button>' +
+        '<a class="navlink" data-act="file">Preuzmi fajl</a>' +
+        (many ? '<button class="ghost" type="button" data-act="zip">Preuzmi sve (.zip)</button>' : '') +
+      '</div>' +
     '</div>' +
     (e.note ? '<p class="code-note">' + esc(e.note) + '</p>' : '') +
-    (ok
-      ? '<pre><code></code></pre>'
-      : '<div class="code-missing">Fajl sa kodom nije dostupan. Osveži stranicu za koji trenutak.</div>') +
+    (many
+      ? '<div class="code-tabs" role="tablist">' + e.sources.map(function (src, k) {
+          return '<button type="button" role="tab" data-tab="' + k + '">' + esc(src.name) + '</button>';
+        }).join("") + '</div>'
+      : '') +
+    '<pre><code></code></pre>' +
+    '<div class="code-missing" hidden>Fajl nije dostupan. Osveži stranicu za koji trenutak.</div>' +
   '</article>';
+}
+
+// Switches a card to one of its files: tab state, code, and what the copy and
+// download buttons act on.
+function showSource(card, src, k) {
+  card.querySelectorAll("[data-tab]").forEach(function (tab) {
+    tab.setAttribute("aria-selected", String(Number(tab.dataset.tab) === k));
+  });
+
+  const ok = src.code !== null;
+  const pre = card.querySelector("pre");
+  pre.hidden = !ok;
+  card.querySelector(".code-missing").hidden = ok;
+  card.querySelector('[data-act="copy"]').disabled = !ok;
+
+  const link = card.querySelector('[data-act="file"]');
+  link.href = src.path;
+  link.download = baseName(src.name);
+
+  if (ok) {
+    highlight(pre.querySelector("code"), src);
+    pre.scrollTop = 0;
+  }
+  card.dataset.active = k;
+}
+
+function bindCard(card, e) {
+  card.querySelectorAll("[data-tab]").forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      const k = Number(tab.dataset.tab);
+      showSource(card, e.sources[k], k);
+    });
+  });
+  card.querySelector('[data-act="copy"]').addEventListener("click", function () {
+    const src = e.sources[Number(card.dataset.active)];
+    runAction(this, "Kopirano", function () { return navigator.clipboard.writeText(src.code); });
+  });
+  const zipBtn = card.querySelector('[data-act="zip"]');
+  if (zipBtn) {
+    zipBtn.addEventListener("click", function () {
+      runAction(zipBtn, "Preuzeto", function () { return downloadZip(e); });
+    });
+  }
+  showSource(card, e.sources[0], 0);
 }
 
 function render(entries) {
   const list = document.getElementById("list");
   const statusEl = document.getElementById("status");
 
-  document.getElementById("count").textContent =
-    entries.length === 1 ? "1 zadatak" : entries.length + " zadataka";
+  document.getElementById("count").textContent = plural(entries.length, "zadatak", "zadatka", "zadataka");
 
   if (entries.length === 0) {
     list.hidden = true;
@@ -122,14 +218,8 @@ function render(entries) {
   statusEl.hidden = true;
   list.hidden = false;
   list.innerHTML = entries.map(cardHtml).join("");
-
   list.querySelectorAll(".code-card").forEach(function (card) {
-    const entry = entries[Number(card.dataset.i)];
-    if (entry.code === null) return;
-    highlight(card.querySelector("code"), entry);
-    card.querySelector('[data-act="copy"]').addEventListener("click", function () {
-      copyCode(this, entry);
-    });
+    bindCard(card, entries[Number(card.dataset.i)]);
   });
 }
 
@@ -137,16 +227,15 @@ function applyFilter() {
   const q = document.getElementById("search").value.trim().toLowerCase();
   if (!q) return render(allEntries);
   render(allEntries.filter(function (e) {
-    return [e.title, e.fileName, e.note, e.code].some(function (v) {
-      return (v || "").toLowerCase().includes(q);
-    });
+    const haystack = [e.title, e.note].concat(e.sources.map(function (s) { return s.name + "\n" + (s.code || ""); }));
+    return haystack.some(function (v) { return (v || "").toLowerCase().includes(q); });
   }));
 }
 
 async function load() {
   const statusEl = document.getElementById("status");
   try {
-    allEntries = await Promise.all((await loadCode()).map(fetchSource));
+    allEntries = await Promise.all((await loadCode()).map(withSources));
     document.getElementById("toolbar").hidden = allEntries.length === 0;
     document.getElementById("search").addEventListener("input", applyFilter);
     render(allEntries);

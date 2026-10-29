@@ -678,3 +678,36 @@ button.ghost.danger { color: var(--danger); }
   background: transparent;
 }
 .code-missing { padding: 14px 16px; border-top: 1px solid var(--line); color: var(--danger); font-size: 13px; }
+
+.code-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 12px;
+  border-top: 1px solid var(--line);
+  overflow-x: auto;
+}
+.code-tabs button {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 9px 10px 7px;
+  font-size: 12.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.code-tabs button:hover { color: var(--ink); }
+.code-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+
+.picked-files {
+  margin: 10px 0 0;
+  padding: 10px 12px 10px 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  max-height: 180px;
+  overflow-y: auto;
+}
