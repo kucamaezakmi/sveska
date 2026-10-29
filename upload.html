@@ -11,7 +11,7 @@
   <header class="page-head">
     <div>
       <h1>Uređivanje</h1>
-      <p class="sub">Dodavanje i brisanje zadataka. Potreban je tvoj GitHub token.</p>
+      <p class="sub">Dodavanje i brisanje zadataka sa kodom i slikama. Potreban je tvoj GitHub token.</p>
     </div>
     <div class="head-actions">
       <a class="navlink" href="index.html">Nazad na svesku</a>
@@ -30,8 +30,46 @@
   </form>
 
   <div id="app" hidden>
+    <form class="panel" id="codeForm">
+      <h2>Novi zadatak sa kodom</h2>
+
+      <div class="field">
+        <label class="lbl" for="kodNaslov">Naslov</label>
+        <input type="text" id="kodNaslov" placeholder="Opciono, inače ime fajla">
+      </div>
+
+      <div class="field">
+        <label class="lbl" for="kodNapomena">Napomena</label>
+        <textarea id="kodNapomena" placeholder="Opciono: tekst zadatka."></textarea>
+      </div>
+
+      <div class="field">
+        <span class="lbl">Fajl sa kodom</span>
+        <div class="dropzone">
+          <label class="file-label" for="codeFileInput">Izaberi fajl</label>
+          <input type="file" id="codeFileInput" hidden>
+          <span class="dz-hint" id="codeHint">.cs, .py, .c, .cpp, .java, .js ili bilo koji tekstualni fajl.</span>
+        </div>
+      </div>
+
+      <div id="codeErr" class="err" hidden></div>
+
+      <div class="actions">
+        <button type="submit" class="primary" id="codeSubmitBtn">Sačuvaj kod</button>
+        <span id="codeStatusMsg" class="hint"></span>
+      </div>
+    </form>
+
+    <div class="toolbar">
+      <span class="count" id="codeCount"></span>
+    </div>
+    <div id="codeListStatus" class="empty">Učitavanje.</div>
+    <div id="codeList" class="code-admin-list" hidden></div>
+
+    <hr class="section-sep">
+
     <form class="panel" id="entryForm">
-      <h2>Novi zadatak</h2>
+      <h2>Novi zadatak sa slikom</h2>
 
       <div class="field field-row">
         <div>
@@ -85,6 +123,8 @@
 <script src="common.js"></script>
 <script>
 const TOKEN_KEY = "sveska_gh_token";
+const ENTRIES_PATH = "entries.json";
+const CODE_PATH = "kod.json";
 const MAX_RETRIES = 4;
 
 let token = localStorage.getItem(TOKEN_KEY) || "";
@@ -98,8 +138,15 @@ function ghHeaders() {
   };
 }
 
+// Encodes in chunks: one fromCharCode.apply call over a large file would
+// exceed the engine's argument limit and throw.
 function utf8ToB64(str) {
-  return btoa(String.fromCharCode.apply(null, new TextEncoder().encode(str)));
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(bin);
 }
 
 function b64ToUtf8(b64) {
@@ -132,8 +179,9 @@ async function verifyToken() {
   return true;
 }
 
-async function getEntriesFile() {
-  const res = await gh(SITE.apiBase + "/contents/entries.json?ref=" + SITE.branch + "&t=" + Date.now());
+// Reads a JSON index file (entries.json or kod.json) together with its sha.
+async function getJsonFile(path) {
+  const res = await gh(SITE.apiBase + "/contents/" + path + "?ref=" + SITE.branch + "&t=" + Date.now());
   if (res.status === 404) return { entries: [], sha: null };
   if (!res.ok) {
     const err = new Error(ghError(res.status, await res.text()));
@@ -145,9 +193,9 @@ async function getEntriesFile() {
   try {
     entries = JSON.parse(b64ToUtf8(data.content) || "[]");
   } catch (e) {
-    throw new Error("entries.json nije ispravan JSON. Popravi ga ručno na GitHub-u.");
+    throw new Error(path + " nije ispravan JSON. Popravi ga ručno na GitHub-u.");
   }
-  if (!Array.isArray(entries)) throw new Error("entries.json mora biti niz.");
+  if (!Array.isArray(entries)) throw new Error(path + " mora biti niz.");
   return { entries: entries, sha: data.sha };
 }
 
@@ -181,25 +229,25 @@ async function deleteFile(path, sha, message) {
   }
 }
 
-async function deleteImage(imagePath, message) {
-  const res = await gh(SITE.apiBase + "/contents/" + imagePath + "?ref=" + SITE.branch + "&t=" + Date.now());
+async function deleteRepoFile(path, message) {
+  const res = await gh(SITE.apiBase + "/contents/" + path + "?ref=" + SITE.branch + "&t=" + Date.now());
   if (!res.ok) return false;
   const data = await res.json();
-  await deleteFile(imagePath, data.sha, message);
+  await deleteFile(path, data.sha, message);
   return true;
 }
 
-// Reads entries.json, applies mutate(entries) -> newEntries, writes it back.
+// Reads a JSON index file, applies mutate(entries) -> newEntries, writes it back.
 // Retries with a fresh sha when GitHub reports a write conflict (409 or 422),
 // because another write landed between our read and our write.
-async function updateEntriesJson(mutate, message) {
+async function updateJsonFile(path, mutate, message) {
   let lastErr;
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const current = await getEntriesFile();
+    const current = await getJsonFile(path);
     const newEntries = mutate(current.entries.slice());
     const content = utf8ToB64(JSON.stringify(newEntries, null, 2));
     try {
-      await putFile("entries.json", content, message, current.sha);
+      await putFile(path, content, message, current.sha);
       return newEntries;
     } catch (err) {
       lastErr = err;
@@ -211,6 +259,81 @@ async function updateEntriesJson(mutate, message) {
     }
   }
   throw lastErr;
+}
+
+// The site shows code as text, so binary files are rejected up front instead of
+// ending up as garbage on zadaci.html.
+const MAX_CODE_BYTES = 200 * 1024;
+const CODE_HINT = ".cs, .py, .c, .cpp, .java, .js ili bilo koji tekstualni fajl.";
+let codeFile = null;
+
+async function readCodeFile(file) {
+  if (file.size > MAX_CODE_BYTES) throw new Error("Fajl je veći od 200 KB.");
+  const text = await file.text();
+  if (text.includes("\u0000")) throw new Error("Fajl nije tekstualni. Izaberi fajl sa izvornim kodom.");
+  if (!text.trim()) throw new Error("Fajl je prazan.");
+  return text;
+}
+
+// Keeps the extension (zadaci.html picks the language from it) and drops
+// characters that are awkward in a URL path.
+function safeFileName(name) {
+  const clean = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^[-.]+/, "");
+  return clean || "kod.txt";
+}
+
+function resetCodeForm() {
+  codeFile = null;
+  document.getElementById("kodNaslov").value = "";
+  document.getElementById("kodNapomena").value = "";
+  document.getElementById("codeFileInput").value = "";
+  document.getElementById("codeHint").textContent = CODE_HINT;
+}
+
+async function refreshCodeList() {
+  const listStatus = document.getElementById("codeListStatus");
+  const list = document.getElementById("codeList");
+
+  listStatus.hidden = false;
+  listStatus.textContent = "Učitavanje.";
+  list.hidden = true;
+
+  try {
+    const result = await getJsonFile(CODE_PATH);
+    const entries = result.entries
+      .filter(function (e) { return e && e.id && e.filePath; })
+      .sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+
+    document.getElementById("codeCount").textContent = "Kod: " + entries.length;
+
+    if (entries.length === 0) {
+      listStatus.textContent = "Nema još nijednog zadatka sa kodom.";
+      return;
+    }
+
+    listStatus.hidden = true;
+    list.hidden = false;
+    list.innerHTML = entries.map(function (e) {
+      return '<div class="code-row">' +
+        '<div class="code-row-main">' +
+          '<div class="t">' + esc(e.title) + '</div>' +
+          '<div class="s"><span class="tag">' + esc(e.fileName) + '</span>' + fmtDate(e.createdAt) + '</div>' +
+        '</div>' +
+        '<button class="ghost danger" type="button" data-id="' + esc(e.id) + '" data-title="' + esc(e.title) + '">Obriši</button>' +
+      '</div>';
+    }).join("");
+
+    list.querySelectorAll("button[data-id]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (!confirm('Obrisati zadatak "' + btn.dataset.title + '"?')) return;
+        removeEntry(CODE_PATH, btn.dataset.id, btn, btn.dataset.title, refreshCodeList);
+      });
+    });
+  } catch (err) {
+    listStatus.hidden = false;
+    listStatus.textContent = "Ne mogu da učitam listu. " + err.message;
+  }
 }
 
 function compressImage(file, maxDim, quality) {
@@ -272,7 +395,7 @@ async function refreshList() {
   grid.hidden = true;
 
   try {
-    const result = await getEntriesFile();
+    const result = await getJsonFile(ENTRIES_PATH);
     const entries = result.entries
       .filter(function (e) { return e && e.id && e.title; })
       .sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
@@ -301,7 +424,7 @@ async function refreshList() {
       btn.addEventListener("click", function (ev) {
         ev.stopPropagation();
         if (!confirm('Obrisati zadatak "' + btn.dataset.title + '"?')) return;
-        removeEntry(btn.dataset.id, btn, btn.dataset.title);
+        removeEntry(ENTRIES_PATH, btn.dataset.id, btn, btn.dataset.title, refreshList);
       });
     });
   } catch (err) {
@@ -310,24 +433,27 @@ async function refreshList() {
   }
 }
 
-async function removeEntry(id, btn, title) {
+// Removes an entry from an index file, then the file it points to (the image
+// of a picture task, or the source file of a code task).
+async function removeEntry(indexPath, id, btn, title, refresh) {
   if (btn) { btn.disabled = true; btn.textContent = "Brisanje"; }
   try {
     let target = null;
-    await updateEntriesJson(function (entries) {
+    await updateJsonFile(indexPath, function (entries) {
       target = entries.find(function (e) { return e.id === id; }) || null;
       return entries.filter(function (e) { return e.id !== id; });
     }, "Ukloni zadatak: " + (title || id));
 
-    if (target && target.imagePath) {
+    const filePath = target && (target.imagePath || target.filePath);
+    if (filePath) {
       try {
-        await deleteImage(target.imagePath, "Ukloni sliku: " + target.title);
+        await deleteRepoFile(filePath, "Ukloni fajl: " + target.title);
       } catch (e) {
         // Entry is already gone from the list, so a leftover image file is
         // harmless. Not worth failing the delete over.
       }
     }
-    await refreshList();
+    await refresh();
   } catch (err) {
     alert("Brisanje nije uspelo. " + err.message);
     if (btn) { btn.disabled = false; btn.textContent = "Obriši"; }
@@ -390,7 +516,7 @@ document.getElementById("entryForm").addEventListener("submit", async function (
     imageUploaded = true;
 
     setBusy(true, "Upisivanje");
-    await updateEntriesJson(function (entries) {
+    await updateJsonFile(ENTRIES_PATH, function (entries) {
       entries.push({
         id: id,
         title: naslov,
@@ -418,12 +544,86 @@ document.getElementById("entryForm").addEventListener("submit", async function (
     // does not sit in the repo unreferenced by any entry.
     if (imageUploaded) {
       try {
-        await deleteImage(imagePath, "Poništi nedovršeni upload: " + naslov);
+        await deleteRepoFile(imagePath, "Poništi nedovršeni upload: " + naslov);
       } catch (e) {}
     }
     showErr("formErr", "Snimanje nije uspelo. " + err.message);
   } finally {
     setBusy(false);
+  }
+});
+
+document.getElementById("codeFileInput").addEventListener("change", async function (e) {
+  const file = e.target.files[0];
+  codeFile = null;
+  if (!file) return;
+  showErr("codeErr", "");
+  const hint = document.getElementById("codeHint");
+  try {
+    codeFile = { name: file.name, text: await readCodeFile(file) };
+    const lines = codeFile.text.split("\n").length;
+    const few = lines % 10 >= 2 && lines % 10 <= 4 && (lines % 100 < 12 || lines % 100 > 14);
+    hint.textContent = file.name + ", " + lines + (few ? " linije." : " linija.");
+  } catch (err) {
+    e.target.value = "";
+    hint.textContent = CODE_HINT;
+    showErr("codeErr", err.message);
+  }
+});
+
+document.getElementById("codeForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  showErr("codeErr", "");
+
+  if (!codeFile) {
+    showErr("codeErr", "Izaberi fajl sa kodom.");
+    return;
+  }
+
+  const btn = document.getElementById("codeSubmitBtn");
+  const statusMsg = document.getElementById("codeStatusMsg");
+  const file = codeFile;
+  const title = document.getElementById("kodNaslov").value.trim() || file.name;
+  const note = document.getElementById("kodNapomena").value.trim();
+  const id = String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8);
+  const filePath = "kod/" + id + "-" + safeFileName(file.name);
+  let fileUploaded = false;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Slanje';
+  statusMsg.textContent = "";
+
+  try {
+    await putFile(filePath, utf8ToB64(file.text), "Dodaj kod: " + title);
+    fileUploaded = true;
+
+    await updateJsonFile(CODE_PATH, function (entries) {
+      entries.push({
+        id: id,
+        title: title,
+        note: note,
+        fileName: file.name,
+        filePath: filePath,
+        createdAt: Date.now()
+      });
+      return entries;
+    }, "Dodaj zadatak sa kodom: " + title);
+
+    resetCodeForm();
+    statusMsg.innerHTML = '<span class="ok-msg">Sačuvano.</span>';
+    setTimeout(function () { statusMsg.textContent = ""; }, 4000);
+    await refreshCodeList();
+  } catch (err) {
+    // Same rollback as the image upload: no source file without an index entry.
+    if (fileUploaded) {
+      try {
+        await deleteRepoFile(filePath, "Poništi nedovršeni upload: " + title);
+      } catch (e2) {}
+    }
+    showErr("codeErr", "Snimanje nije uspelo. " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Sačuvaj kod";
   }
 });
 
@@ -468,6 +668,7 @@ document.getElementById("logoutBtn").addEventListener("click", function () {
 function enterApp() {
   document.getElementById("gateForm").hidden = true;
   document.getElementById("app").hidden = false;
+  refreshCodeList();
   refreshList();
 }
 

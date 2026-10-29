@@ -29,16 +29,25 @@ function mountGithubLink() {
     ' title="Moj GitHub profil" aria-label="Otvori moj GitHub profil">' + GITHUB_ICON_SVG + '</a>');
 }
 
-// Fetches the public entries.json and returns the valid entries, newest first.
-// index.html and zadaci.html both use it, so they agree on what counts as an entry.
-async function loadEntries() {
-  const res = await fetch("entries.json?t=" + Date.now(), { cache: "no-store" });
+// Fetches a public JSON index (entries.json or kod.json) and returns the
+// entries that pass isValid, newest first. A missing file means no entries yet.
+async function loadIndex(path, isValid) {
+  const res = await fetch(path + "?t=" + Date.now(), { cache: "no-store" });
+  if (res.status === 404) return [];
   if (!res.ok) throw new Error("HTTP " + res.status);
 
   const data = await res.json();
   if (!Array.isArray(data)) throw new Error("neispravan format");
 
   return data
-    .filter(function (e) { return e && e.imagePath && e.title; })
+    .filter(function (e) { return e && isValid(e); })
     .sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+}
+
+function loadEntries() {
+  return loadIndex("entries.json", function (e) { return e.imagePath && e.title; });
+}
+
+function loadCode() {
+  return loadIndex("kod.json", function (e) { return e.filePath && e.title; });
 }
