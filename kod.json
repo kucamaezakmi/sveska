@@ -1,0 +1,278 @@
+[
+  {
+    "id": "1791247345436-otinpc",
+    "title": "Zadatak 1",
+    "note": "U metodi MAIN ispisati na ekran recenicu: ,,Zdravo, ovo je moj prvi C# program!\".",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791247345436-otinpc/Program.cs"
+      }
+    ],
+    "createdAt": 1791247347895
+  },
+  {
+    "id": "1791247441269-il2g98",
+    "title": "Zadatak 2",
+    "note": "Deklarisati promenljive: celobrojnu(godine), decimalnu(visina), znakovnu(pol) i tekstualnu(ime). Dobiti im proizvoljne vrednosti i ispisati podatke na ekranu u jednoj recenici.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791247441269-il2g98/Program.cs"
+      }
+    ],
+    "createdAt": 1791247444270
+  },
+  {
+    "id": "1791247519903-wexonw",
+    "title": "Zadatak 3",
+    "note": "Uneti dva cela broja sa tastature. Napraviti bool promenljivu koja pokazuje da li je prvi broj veci od drugog i drugu bool promenljivu koja pokazuje da li su brojevi jednaki. Ispisati sve vrednosti na ekranu.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791247519903-wexonw/Program.cs"
+      }
+    ],
+    "createdAt": 1791247522415
+  },
+  {
+    "id": "1791247563028-vzp8ef",
+    "title": "Zadatak 4",
+    "note": "Napisati program koji unutar if bloka deklarise promenljivu i koristi je samo unutar tog bloka. Nakon tog bloka pokusati ispisati istu promenljivu i komentarom objasniti zasto to izaziva gresku pri prevodjenju.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791247563028-vzp8ef/Program.cs"
+      }
+    ],
+    "createdAt": 1791247566206
+  },
+  {
+    "id": "1791247603564-ce5pfm",
+    "title": "Zadatak 5",
+    "note": "Napraviti staticko celobrojno polje brojac unutar klase Program. Napraviti staticku metodu Pozovi0 koja pri svakom pozivu uveca brojac za 1 i ispise njegovu vrednost. Pozvati metodu tri puta iz Main metode.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791247603564-ce5pfm/Program.cs"
+      }
+    ],
+    "createdAt": 1791247606723
+  },
+  {
+    "id": "1791248400413-e2092g",
+    "title": "Zadatak 6",
+    "note": "Napraviti niz od 5 celih brojeva sa unapred zadatim vrednostima. Ispisati sve elemente niza pomocu for petlje, uz naznaku rednog broja svakog elementa.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791248400413-e2092g/Program.cs"
+      }
+    ],
+    "createdAt": 1791248403026
+  },
+  {
+    "id": "1791248475176-fez0ox",
+    "title": "Zadatak 7/8",
+    "note": "Odredi zbir svih clanova niza; Odredi maksimalnu vrednost",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791248475176-fez0ox/Program.cs"
+      }
+    ],
+    "createdAt": 1791248477376
+  },
+  {
+    "id": "1791248541707-t7gio7",
+    "title": "Zadatak 9",
+    "note": "Formirati niz 5x5 celih brojeva i ispisati ga kao tabelu.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791248541707-t7gio7/Program.cs"
+      }
+    ],
+    "createdAt": 1791248543891
+  },
+  {
+    "id": "1791248769737-mxl2px",
+    "title": "Zadatak 10",
+    "note": "Formirati niz celih brojeva - random 10. Nakon formiranja sa komandom foreach ispisati sve brojeve na ekranu.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791248769737-mxl2px/Program.cs"
+      }
+    ],
+    "createdAt": 1791248771854
+  },
+  {
+    "id": "1791248936929-p5igha",
+    "title": "Zadatak 11",
+    "note": "Formirati strukturu tacka koja sadrzi 2 cela broja. Dodeliti joj koordinate i ispisati na ekranu.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791248936929-p5igha/Program.cs"
+      }
+    ],
+    "createdAt": 1791248939289
+  },
+  {
+    "id": "1791249011129-vcywub",
+    "title": "Zadatak 12",
+    "note": "Formirati niz koji sadrzi 10 random tacaka. Ispisati sve clanove niza.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791249011129-vcywub/Program.cs"
+      }
+    ],
+    "createdAt": 1791249013368
+  },
+  {
+    "id": "1791249085360-c9m9n5",
+    "title": "Zadatak 13",
+    "note": "Odrediti najblizu tacku nuli koordinatnog sistema",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791249085360-c9m9n5/Program.cs"
+      }
+    ],
+    "createdAt": 1791249087410
+  },
+  {
+    "id": "1791249148129-fr1ky1",
+    "title": "Zadatak 14",
+    "note": "Napraviti metodu (funkciju) Duplirajbroj koja duplira vrednost parametra a ispisuje unutar metode. Pozvati metodu iz Main funkcije sa promeljivom, a zatim ispisati vrednosti te promenljive posle poziva metode i uociti da se ona nije promenila!",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791249148129-fr1ky1/Program.cs"
+      }
+    ],
+    "createdAt": 1791249150296
+  },
+  {
+    "id": "1791249455482-is2qsg",
+    "title": "Zadatak 15",
+    "note": "Uraditi isti zadatak kao 14., ali povezivanje broja metode uraditi preko reference.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791249455482-is2qsg/Program.cs"
+      }
+    ],
+    "createdAt": 1791249457859
+  },
+  {
+    "id": "1791249532022-ojumuy",
+    "title": "Zadatak 16",
+    "note": "Napraviti metodu Podeli koja deli 2 broja i ima 2 vrednosti koje vraca - rezultat deljenja i ostatak pri deljenju. Pozvati metodu iz Main funkcije i ispisati oba rezultata.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791249532022-ojumuy/Program.cs"
+      }
+    ],
+    "createdAt": 1791249534202
+  },
+  {
+    "id": "1791249638277-ehetny",
+    "title": "Zadatak 17",
+    "note": "Napraviti metodu Saberi koja sabira 2 broja i daje rezultat tipa int. Pozvati metodu iz Main funkcije i ispisati rezultat.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791249638277-ehetny/Program.cs"
+      }
+    ],
+    "createdAt": 1791249640510
+  },
+  {
+    "id": "1791249703502-fr47me",
+    "title": "Zadatak 18",
+    "note": "Napraviti 2 metode, jedna mnozi 2 broja, a druga odredjuje da li je broj paran. Korisnik u programu unese 2 cela broja, pozove prvu metodu koja ih pomnozi i onda pozove drugu koja odredi da li je rezultat paran!",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791249703502-fr47me/Program.cs"
+      }
+    ],
+    "createdAt": 1791249706035
+  },
+  {
+    "id": "1791249772729-nly24c",
+    "title": "Zadatak 19",
+    "note": "Napisati program koji upisuje tri recenice i tekstualnu datoteku poruka.txt, svaku u posebnom redu. Nakon upisa, ispisati poruku da je upis uspesno izvrsen.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791249772729-nly24c/Program.cs"
+      }
+    ],
+    "createdAt": 1791249774976
+  },
+  {
+    "id": "1791250013312-5t4vvw",
+    "title": "Zadatak 20",
+    "note": "Koristeci datoteku poruka.txt napravljenu u prethodnom zadatku, napisati program koji cita sve redove iz nje i ispisuje ih na ekranu, sve dok se ne dostigne kraj datoteke.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791250013312-5t4vvw/Program.cs"
+      }
+    ],
+    "createdAt": 1791250015720
+  },
+  {
+    "id": "1791250090277-srh7u2",
+    "title": "Zadatak 21",
+    "note": "Upisati u fajl 15 slucajnih brojeva",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791250090277-srh7u2/Program.cs"
+      }
+    ],
+    "createdAt": 1791250092579
+  },
+  {
+    "id": "1791252199623-2ly94b",
+    "title": "Zadatak 22",
+    "note": "Odrediti koji je najveci broj u formiranom fajlu",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791252199623-2ly94b/Program.cs"
+      }
+    ],
+    "createdAt": 1791252202305
+  },
+  {
+    "id": "1791252378206-flk0un",
+    "title": "Zadatak 23",
+    "note": "Dodamo broj i on ga stavi u fajl",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791252378206-flk0un/Program.cs"
+      }
+    ],
+    "createdAt": 1791252381244
+  },
+  {
+    "id": "1791252466636-jufd7v",
+    "title": "Zadatak 24",
+    "note": "Napraviti niz sa imenima pet ucenika. Upisati svako ime u posebnom redu tekstualne datoteke ucenici.txt , koriscenjem foreach petlje.",
+    "files": [
+      {
+        "name": "Program.cs",
+        "path": "kod/1791252466636-jufd7v/Program.cs"
+      }
+    ],
+    "createdAt": 1791252469332
+  }
+]
